@@ -43,7 +43,7 @@ def final_project():
         conn_id="redshift",
         aws_credentials_id="aws_credentials",
         s3_bucket="airflow-egg",
-        s3_key="song_data"
+        s3_key="song_data/A/A/"
     )
 
     load_songplays_table = LoadFactOperator(

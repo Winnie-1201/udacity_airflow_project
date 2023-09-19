@@ -24,15 +24,26 @@ class StageToRedshiftOperator(BaseOperator):
         self.json_path = json_path
 
     def execute(self, context):
-        aws_hook = AwsHook(self.aws_credentials_id)
-        credentials = aws_hook.get_credentials()
-        redshift = PostgresHook(postgres_conn_id=self.conn_id)
-        redshift.run(f"DELETE FROM {self.table}")
-        self.s3_key = self.s3_key.format(**context)
-        s3_path = f"s3://{self.s3_bucket}/{self.s3_key}/"
-        redshift.run(f"COPY {self.table} FROM '{s3_path}' ACCESS_KEY_ID '{credentials.access_key}' \
-            SECRET_ACCESS_KEY '{credentials.secret_key}' FORMAT AS JSON '{self.json_path}'")
+        metastoreBackend = MetastoreBackend()
+        aws_connection=metastoreBackend.get_connection(self.aws_credentials_id)
+        redshift = PostgresHook(postgres_conn_id=self.redshift_conn_id)
 
+        self.log.info("Clearing data from destination Redshift table")
+        redshift.run("DELETE FROM {}".format(self.table))
+
+        self.log.info("Copying data from S3 to Redshift")
+        rendered_key = self.s3_key.format(**context)
+        s3_path = "s3://{}/{}".format(self.s3_bucket, rendered_key)
+
+        formatted_sql = StageToRedshiftOperator.copy_sql.format(
+            self.table,
+            s3_path,
+            aws_connection.login,
+            aws_connection.password,
+            self.json_path
+        )
+
+        redshift.run(formatted_sql)
         self.log.info(f"Successfully copied table {self.table} to Redshift!")
 
 
