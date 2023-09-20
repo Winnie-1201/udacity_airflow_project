@@ -43,7 +43,8 @@ def final_project():
         conn_id="redshift",
         aws_credentials_id="aws_credentials",
         s3_bucket="airflow-egg",
-        s3_key="song_data/A/A/"
+        s3_key="song_data/A/A/A",
+        json_path="auto"
     )
 
     load_songplays_table = LoadFactOperator(
@@ -93,7 +94,8 @@ def final_project():
 
     run_quality_checks = DataQualityOperator(
         task_id='Run_data_quality_checks',
-        dag=dag
+        redshift_conn_id = "redshift",
+        tables = ["songplays", "users", "songs", "artists", "time"]
     )
 
     end_operator = DummyOperator(task_id='End_execution')
